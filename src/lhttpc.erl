@@ -45,6 +45,8 @@
 -include("lhttpc_types.hrl").
 -include("lhttpc.hrl").
 
+-compile([{parse_transform, lager_transform}]).
+
 %%==============================================================================
 %% Exported functions
 %%==============================================================================
@@ -426,11 +428,17 @@ request(URL, Method, Hdrs, Body, Timeout, Options) ->
 -spec request(string(), port_num(), boolean(), string(), method(),
     headers(), iodata(), pos_timeout(), options()) -> result().
 request(Host, Port, Ssl, Path, Method, Hdrs, Body, Timeout, Options) ->
+    T0 = erlang:system_time(milli_seconds),
     verify_options(Options),
     Args = [self(), Host, Port, Ssl, Path, Method, Hdrs, Body, Options],
     Pid = spawn_link(lhttpc_client, request, Args),
+    lager:info("Pid=~p, Host=~p, Path=~p, Method= ~p, Body=~p ~n", [Pid, Host, Path, Method, Body]),
     receive
         {response, Pid, R} ->
+            T1 = erlang:system_time(milli_seconds),
+            ElapsedTime = T1 - T1,
+            lager:info("ElapsedMSTime=~p, Pid=~p, Host=~p, Path=~p, Method= ~p, Body=~p ~n",
+                [ElapsedTime, Pid, Host, Path, Method, Body]),
             R;
         {'EXIT', Pid, Reason} ->
             % This could happen if the process we're running in traps exits
